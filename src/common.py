@@ -1,4 +1,6 @@
+import random
 from abc import abstractmethod, ABC
+from copy import deepcopy
 
 import pygame
 from dataclasses import dataclass
@@ -109,9 +111,19 @@ class Santa(Drawable):
     def render(self, delta_time):
         x, y = self.get_position()
         super().render(delta_time)
+
+        text_x = x * GRID_SIZE + GRID_SIZE // 2 - self.__text.get_rect().width // 2
+        text_y = y * GRID_SIZE + GRID_SIZE + 1
+
+        min_x = 1
+        min_y = 1
+
+        max_x = GRID_WIDTH * GRID_SIZE - self.__text.get_rect().width - 1
+        max_y = GRID_HEIGHT * GRID_SIZE - self.__text.get_rect().height - 1
+
         pygame.display.get_surface().blit(self.__text, (
-            x * GRID_SIZE + GRID_SIZE // 2 - self.__text.get_rect().width // 2,
-            y * GRID_SIZE + GRID_SIZE + 1
+            min(max(min_x, text_x), max_x),
+            min(max(min_y, text_y), max_y),
         ))
 
 @dataclass
@@ -250,22 +262,16 @@ class Game(ABC):
             self.update(events)
             self.render(delta_time)
 
+        self.stop_server()
+
     def __update_waiting(self, events):
-        # add any new santas
-        santa_ids = self.get_santa_ids()
-        for santa_id in santa_ids:
-            if santa_id.ip not in self.__game_state.santas.keys():
-                self.__game_state.santas[santa_id.ip] = Santa(0, 0, santa_id.name)
-
-        # remove any santas that are no longer with us D:
-        santa_ids = self.__game_state.santas.keys()
-        for santa_id in santa_ids:
-            if santa_id not in santa_ids:
-                self.__game_state.santas.pop(santa_id)
-
         if self.__start_button.update(events):
             self.lock_server()
             self.__game_state.game_mode = GameMode.PLAYING
+            for santa_id in self.get_santa_ids():
+                random_x = random.randint(0, GRID_WIDTH - 1)
+                random_y = random.randint(0, GRID_HEIGHT - 1)
+                self.__game_state.santas[santa_id.ip] = Santa(random_x, random_y, santa_id.name)
 
     def __update_playing(self):
         if self.__last_turn_ms + MOVE_TIME * 1000 < pygame.time.get_ticks() and not self.__awaiting_santas:
@@ -314,7 +320,7 @@ class Game(ABC):
             pygame.display.get_surface().blit(server_ip, (GRID_SIZE, int(2 * GRID_SIZE)))
 
             y = 3 * GRID_SIZE
-            for santa in self.__game_state.santas.values():
+            for santa in self.get_santa_ids():
                 text = self.__font.render(santa.name, True, (0, 0, 0))
                 pygame.display.get_surface().blit(text, (int(1.5 * GRID_SIZE), y))
                 y += int(text.get_rect().height * 1.5)

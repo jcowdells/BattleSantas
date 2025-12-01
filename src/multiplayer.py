@@ -1,5 +1,5 @@
+import json
 import socket
-import threading
 from edit_me import SERVER_HOST, SERVER_PORT, handshake, take_turn
 from datetime import datetime
 
@@ -8,7 +8,9 @@ class Packet:
     def get_time():
         return datetime.now().strftime("%A %-d %B %Y %H:%M:%S")
 
-    def __init__(self, header: str, data: str, time=get_time()):
+    def __init__(self, header: str, data: str, time=None):
+        if time is None:
+            time = Packet.get_time()
         self.__time = time
         self.header = header
         self.data = data
@@ -30,17 +32,27 @@ class Packet:
 def recv_server(conn):
     while True:
         message = conn.recv(1024)
-        if message:
-            print(message.decode())
+        packet = Packet.from_bytes(message)
 
 def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # AF_INET = internet protocol
     sock.connect((SERVER_HOST, SERVER_PORT))
     sock.send(Packet("HANDSHAKE", handshake()).get_bytes())
     while True:
-        packet = sock.recv(1024)
-        if packet:
-            print(packet)
+        message = sock.recv(1024)
+        if not message:
+            continue
+        packet = Packet.from_bytes(message)
+        if packet.header == "STOP":
+            break
+        if packet.header == "PLEASE SEND ME YOUR DIRECTION":
+            game_state = json.loads(packet.data)
+            direction = take_turn(game_state)
+            sock.send(Packet(
+                "DIRECTION",
+                direction.name
+            ).get_bytes())
+
     sock.close()
 
 if __name__ == "__main__":

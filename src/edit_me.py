@@ -5,7 +5,7 @@ You need to change the server host in order to connect to multiplayer. The IP wi
 is running.
 """
 SERVER_HOST = "0.0.0.0"
-SERVER_PORT = 33279
+SERVER_PORT = 27910
 
 def handshake() -> str:
     """
