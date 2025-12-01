@@ -1,36 +1,13 @@
 from common import Game, Direction, SantaID
 from edit_me import handshake, take_turn
 from threading import Thread, Event
+import socket
 import time
-from datetime import datetime
-
-class Packet:
-    @staticmethod
-    def get_time():
-        return datetime.now().strftime("%A %-d %B %Y %H:%M:%S")
-
-    def __init__(self, header: str, data: str, time=get_time()):
-        self.__time = time
-        self.header = header
-        self.data = data
-
-    def __str__(self):
-        return f"{self.__time}\n{self.__header}\n{self.__data}"
-
-    @classmethod
-    def from_bytes(cls, bytes):
-        packet_str = bytes.decode()
-        packet_lines = packet_str.split("\n")
-        if len(packet_lines) != 3:
-            raise ValueError("Bad packet.")
-        return cls(*packet_lines)
-
-    def get_bytes(self):
-        return str(self).encode()
+from multiplayer import Packet
 
 class Connection:
     def __init__(self, connection, address, running):
-        self.__connection = connnection
+        self.__connection = connection
         self.__address = address
         self.__running_event = running
         self.__name = ""
@@ -39,11 +16,11 @@ class Connection:
         self.__thread.start()
 
     def __thread_target(self):
-        self.__received_packet.clear()
         while self.__running_event.is_set():
             try:
-                data = conn.recv(1024)
+                data = self.__connection.recv(1024)
                 packet = Packet.from_bytes(data)
+                print(packet)
                 if packet.header == "DIRECTION":
                     self.__direction = getattr(Direction, packet.data)
                 elif packet.header == "HANDSHAKE":
@@ -51,9 +28,12 @@ class Connection:
             except Exception as e:
                 print(f"Exception: {e}")
                 packet = Packet("EXCEPTION", f"An error occured. Your connection has been terminated. error={type(e)}".encode())
-                conn.send(packet.get_bytes())
-                conn.shutdown(socket.SHUT_RDWR)
-                conn.close()
+                try:
+                    self.__connection.send(packet.get_bytes())
+                    self.__connection.shutdown(socket.SHUT_RDWR)
+                    self.__connection.close()
+                except OSError:
+                    pass
                 break
 
     def get_name(self):
@@ -79,29 +59,37 @@ class Server(Game):
         self.__direction_dict = dict()
         self.__connection_names = dict()
         self.__host = "0.0.0.0"
-        self.__port = 27910
+        self.__port = 33279
 
     def __accept_target(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # AF_INET = internet protocol
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self.__host, self.__port))
+        sock.listen(64)
         while self.__running_event.is_set():
-            conn, addr = sock.accept()
-            if self.__accepting_event.is_set():
-                self.__connections.append(Connection(conn, addr))
+            try:
+                conn, addr = sock.accept()
+                if self.__accepting_event.is_set():
+                    self.__connections.append(Connection(conn, addr, self.__running_event))
+            except Exception as e:
+                print(e)
 
     def __thread_target(self):
         self.__direction_dict = dict()
         while self.__running_event.is_set():
-            if self.__await_event.is_set():
+            try:
+                
                 for connection in self.__connections:
                     direction = connection.get_direction()
                     address = connection.get_address()
-                    if direction is not None:
-                        self.__direction_dict[address] = direction
                     self.__connection_names[address] = connection.get_name()
-                if len(self.__direction_dict) == len(self.__connections):
-                    self.__await_event.clear()
+                    if self.__await_event.is_set():
+                        if direction is not None:
+                            self.__direction_dict[address] = direction
+                        if len(self.__direction_dict) == len(self.__connections):
+                            self.__await_event.clear()
+            except Exception as e:
+                print(e)
 
     def start_server(self):
         self.__running_event.set()
@@ -134,7 +122,9 @@ class Server(Game):
         return not self.__await_event.is_set()
 
     def get_santas(self) -> list[tuple[str, Direction]]:
-        return self.__direction_dict.items()
+        items = self.__direction_dict.items()
+        self.__direction_dict = dict()
+        return items
 
 def main():
     game = Server()

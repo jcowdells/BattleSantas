@@ -238,6 +238,7 @@ class Game(ABC):
 
     def run(self):
         self.__running = True
+        self.start_server()
         while self.__running:
             events = pygame.event.get()
             for event in events:
