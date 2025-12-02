@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 MOVE_TIME = 1.0
-GRID_SIZE = 36
-GRID_WIDTH = 30
-GRID_HEIGHT = 20
+GRID_SIZE = 48
+GRID_WIDTH = 20
+GRID_HEIGHT = 16
 LINE_WIDTH = 5
 LINE_COLOUR = (75, 75, 75)
 NUM_GIFTS = 15
