@@ -4,7 +4,7 @@ from common import Direction
 You need to change the server host in order to connect to multiplayer. The IP will be displayed on the board when the game
 is running.
 """
-SERVER_HOST = "0.0.0.0"
+SERVER_HOST = "127.0.1.1"
 SERVER_PORT = 27910
 
 def handshake() -> str:
@@ -36,8 +36,4 @@ def take_turn(game_state: dict) -> Direction:
     You should return one of: Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT - this will be the direction
     that your santa will move in.
     """
-    santa_pos = game_state["santas"][0]
-    if santa_pos[0] > santa_pos[1]:
-        return Direction.DOWN
-    else:
-        return Direction.RIGHT
+    pass

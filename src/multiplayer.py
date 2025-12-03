@@ -48,10 +48,11 @@ def main():
         if packet.header == "PLEASE SEND ME YOUR DIRECTION":
             game_state = json.loads(packet.data)
             direction = take_turn(game_state)
-            sock.send(Packet(
-                "DIRECTION",
-                direction.name
-            ).get_bytes())
+            if direction is not None:
+                sock.send(Packet(
+                    "DIRECTION",
+                    direction.name
+                ).get_bytes())
 
     sock.close()
 
