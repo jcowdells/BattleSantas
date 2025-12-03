@@ -1,17 +1,17 @@
 import random
 from abc import abstractmethod, ABC
-from copy import deepcopy
 
 import pygame
 from dataclasses import dataclass
 from enum import Enum, auto
 
 MOVE_TIME = 1.0
-GRID_SIZE = 80
-GRID_WIDTH = 8
-GRID_HEIGHT = 8
+GRID_SIZE = 48
+GRID_WIDTH = 20
+GRID_HEIGHT = 16
 LINE_WIDTH = 5
 LINE_COLOUR = (75, 75, 75)
+NUM_GIFTS = 15
 
 class Direction(Enum):
     UP = "up"
@@ -217,7 +217,17 @@ class Game(ABC):
         pygame.font.init()
         pygame.display.set_mode((window_width, window_height))
 
-        self.__game_state = GameState(dict(), [Gift(3, 3)], GameMode.WAITING)
+        unique_present_locations = []
+        while len(unique_present_locations) < NUM_GIFTS:
+            rx = random.randint(0, GRID_WIDTH - 1)
+            ry = random.randint(0, GRID_HEIGHT - 1)
+            for existing_gift in unique_present_locations:
+                if existing_gift.get_x() == rx and existing_gift.get_y() == ry:
+                    continue
+            unique_present_locations.append(Gift(rx, ry))
+
+
+        self.__game_state = GameState(dict(), unique_present_locations, GameMode.WAITING)
         self.__font = pygame.font.Font(pygame.font.get_default_font(), 25)
         self.__big_font = pygame.font.Font(pygame.font.get_default_font(), 40)
 
@@ -278,10 +288,11 @@ class Game(ABC):
             remove_gifts = list()
             for santa in self.__game_state.santas.values():
                 for i, gift in enumerate(self.__game_state.gifts):
-                    if santa.get_x() == gift.get_x() and santa.get_y() == gift.get_y():
+                    if santa.get_x() == gift.get_x() and santa.get_y() == gift.get_y() and not i in remove_gifts:
                         remove_gifts.append(i)
                         santa.score += 1
 
+            remove_gifts = sorted(remove_gifts, key=int, reverse=True)
             for remove_gift in remove_gifts:
                 self.__game_state.gifts.pop(remove_gift)
 
@@ -342,7 +353,7 @@ class Game(ABC):
 
             y = 2 * GRID_SIZE
             santa_scores = [(santa.name, santa.score) for santa in self.__game_state.santas.values()]
-            santa_scores.sort(key=lambda item: item[1])
+            santa_scores.sort(key=lambda item: item[1], reverse=True)
             for name, score in santa_scores:
                 text = self.__font.render(f"{name}: {score}", True, (0, 0, 0))
                 pygame.display.get_surface().blit(text, (int(1.5 * GRID_SIZE), y))

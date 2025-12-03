@@ -6,7 +6,7 @@ from datetime import datetime
 class Packet:
     @staticmethod
     def get_time():
-        return datetime.now().strftime("%A %-d %B %Y %H:%M:%S")
+        return datetime.now().strftime("%A %d %B %Y %H:%M:%S")
 
     def __init__(self, header: str, data: str, time=None):
         if time is None:
